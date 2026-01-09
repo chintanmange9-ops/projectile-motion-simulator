@@ -1,0 +1,2021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Physics Visualizer - Projectile Motion</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 320px 1fr 280px;
+            height: 100vh;
+            gap: 0;
+        }
+        
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .main-canvas {
+            position: relative;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #physics-canvas {
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            background: linear-gradient(to bottom, #e0f2fe 0%, #f0f9ff 50%, #e8f5e8 100%);
+        }
+        
+        .controls-bar {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .data-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .section h3 {
+            color: #2563eb;
+            margin-bottom: 15px;
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 5px;
+        }
+        
+        .input-group {
+            margin-bottom: 15px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+            font-size: 13px;
+        }
+        
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            background: #e5e7eb;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        
+        input[type="number"] {
+            width: 70px;
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13px;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #3b82f6;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 4px 0;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        .data-label {
+            font-size: 12px;
+            color: #374151;
+            font-weight: 500;
+        }
+        
+        .data-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .object-item {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 8px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .object-item:hover {
+            background: rgba(239, 68, 68, 0.2);
+            transform: translateX(2px);
+        }
+        
+        .object-item.selected {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.2);
+        }
+        
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+        
+        .toggle-label:hover {
+            background: rgba(59, 130, 246, 0.05);
+        }
+        
+        .toggle-label input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #3b82f6;
+        }
+        
+        .toggle-text {
+            font-size: 13px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .trajectory-header {
+            margin: 10px 0 5px 0;
+            padding: 8px;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 6px;
+            border-left: 3px solid #3b82f6;
+        }
+        
+        #trajectory-b-controls .trajectory-header {
+            background: rgba(239, 68, 68, 0.05);
+            border-left-color: #ef4444;
+        }
+        
+        .trajectory-data-header {
+            margin: 8px 0 4px 0;
+            padding: 4px 8px;
+            background: rgba(59, 130, 246, 0.05);
+            border-radius: 4px;
+            border-left: 2px solid #3b82f6;
+        }
+        
+        #trajectory-b-data .trajectory-data-header,
+        #trajectory-b-predictions .trajectory-data-header {
+            background: rgba(239, 68, 68, 0.05);
+            border-left-color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Left Sidebar - Controls -->
+        <div class="sidebar">
+            <h2 style="color: #1f2937; margin-bottom: 20px; font-size: 18px;">🚀 Physics Visualizer</h2>
+            
+            <!-- Analysis Modes -->
+            <div class="section">
+                <h3>Analysis Modes</h3>
+                
+                <div class="input-group">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="compare-mode-toggle">
+                        <span class="toggle-text">🔄 Compare Mode</span>
+                    </label>
+                </div>
+                
+                <div class="input-group">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="envelope-toggle">
+                        <span class="toggle-text">📊 Reachability Envelope</span>
+                    </label>
+                </div>
+                
+                <div class="input-group" id="envelope-controls" style="display: none;">
+                    <label>Max Launch Speed: <span id="max-speed-display">100</span> m/s</label>
+                    <div class="input-row">
+                        <input type="range" id="max-speed-slider" min="20" max="200" value="100" step="5">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Preset Scenarios:</label>
+                    <select id="scenario-select" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db;">
+                        <option value="">Select Scenario...</option>
+                        <option value="basic-target">🎯 Basic Target Hit</option>
+                        <option value="elevated-platform">🏔️ Elevated Platform</option>
+                        <option value="obstacle-path">🚧 Obstacle in Path</option>
+                        <option value="long-range">🚀 Long-Range Shot</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Launch Parameters -->
+            <div class="section">
+                <h3 id="params-title">Launch Parameters</h3>
+                
+                <div id="trajectory-a-controls">
+                    <div class="trajectory-header" style="display: none;">
+                        <span style="color: #3b82f6; font-weight: 600;">🔵 Trajectory A</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Initial Velocity: <span id="velocity-display">50</span> m/s</label>
+                        <div class="input-row">
+                            <input type="range" id="velocity-slider" min="10" max="150" value="50" step="1">
+                            <input type="number" id="velocity-input" min="10" max="150" value="50">
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Launch Angle: <span id="angle-display">45</span>°</label>
+                        <div class="input-row">
+                            <input type="range" id="angle-slider" min="5" max="85" value="45" step="1">
+                            <input type="number" id="angle-input" min="5" max="85" value="45">
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="trajectory-b-controls" style="display: none;">
+                    <div class="trajectory-header">
+                        <span style="color: #ef4444; font-weight: 600;">🔴 Trajectory B</span>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Initial Velocity: <span id="velocity-b-display">60</span> m/s</label>
+                        <div class="input-row">
+                            <input type="range" id="velocity-b-slider" min="10" max="150" value="60" step="1">
+                            <input type="number" id="velocity-b-input" min="10" max="150" value="60">
+                        </div>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Launch Angle: <span id="angle-b-display">30</span>°</label>
+                        <div class="input-row">
+                            <input type="range" id="angle-b-slider" min="5" max="85" value="30" step="1">
+                            <input type="number" id="angle-b-input" min="5" max="85" value="30">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label>Gravity: <span id="gravity-display">9.81</span> m/s²</label>
+                    <div class="input-row">
+                        <input type="range" id="gravity-slider" min="1" max="25" value="9.81" step="0.1">
+                        <input type="number" id="gravity-input" min="1" max="25" value="9.81" step="0.1">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Object Placement -->
+            <div class="section">
+                <h3>Target Objects</h3>
+                
+                <div class="input-group">
+                    <button class="btn btn-primary" id="add-object-btn" style="width: 100%;">
+                        ➕ Add Rectangle Target
+                    </button>
+                </div>
+                
+                <div class="input-group">
+                    <label>Click on canvas to place objects</label>
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 5px;">
+                        Default size: 20×15 units<br>
+                        Drag to reposition objects
+                    </div>
+                </div>
+                
+                <div id="objects-list">
+                    <!-- Objects will be listed here -->
+                </div>
+                
+                <button class="btn btn-danger" id="clear-objects-btn" style="width: 100%; margin-top: 10px;">
+                    🗑️ Clear All Objects
+                </button>
+            </div>
+            
+            <!-- Reverse Calculator -->
+            <div class="section">
+                <h3>🎯 Reverse Calculator</h3>
+                <p style="font-size: 11px; margin: 5px 0; color: #6b7280;">Enter any 1-2 values to calculate flight time and other parameters:</p>
+                
+                <div class="input-group">
+                    <label>Velocity (m/s):</label>
+                    <input type="number" id="calc-velocity" placeholder="e.g., 50" min="10" max="200" style="width: 100%;">
+                </div>
+                
+                <div class="input-group">
+                    <label>Angle (°):</label>
+                    <input type="number" id="calc-angle" placeholder="e.g., 45" min="5" max="85" style="width: 100%;">
+                </div>
+                
+                <div class="input-group">
+                    <label>Range (m):</label>
+                    <input type="number" id="calc-range" placeholder="e.g., 100" min="10" max="500" style="width: 100%;">
+                </div>
+                
+                <div class="input-group">
+                    <label>Max Height (m):</label>
+                    <input type="number" id="calc-height" placeholder="e.g., 30" min="1" max="200" style="width: 100%;">
+                </div>
+                
+                <div class="input-group">
+                    <label>Flight Time (s):</label>
+                    <input type="number" id="calc-time" placeholder="e.g., 5.2" min="0.1" max="50" step="0.1" style="width: 100%;">
+                </div>
+                
+                <button class="btn btn-primary" id="calc-btn" style="width: 100%; margin: 5px 0;">Calculate Missing Values</button>
+                
+                <div class="calc-results" id="calc-results" style="display: none; margin-top: 10px;">
+                    <h4 style="color: #2563eb; margin-bottom: 8px; font-size: 14px;">📊 Calculated Values:</h4>
+                    <div id="calc-output" style="background: rgba(59, 130, 246, 0.05); padding: 10px; border-radius: 6px; border-left: 3px solid #3b82f6;"></div>
+                    <button class="btn btn-primary" id="apply-btn" style="width: 100%; margin-top: 8px;">Apply to Simulator</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Canvas Area -->
+        <div class="main-canvas">
+            <div class="canvas-container">
+                <canvas id="physics-canvas"></canvas>
+            </div>
+            
+            <div class="controls-bar">
+                <button class="btn btn-primary" id="launch-btn">🚀 Launch</button>
+                <button class="btn btn-secondary" id="pause-btn" disabled>⏸️ Pause</button>
+                <button class="btn btn-secondary" id="reset-btn">🔄 Reset</button>
+                
+                <div style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+                    <span style="font-size: 12px; color: #6b7280;">Zoom:</span>
+                    <button class="btn btn-secondary" id="zoom-in-btn">🔍+</button>
+                    <button class="btn btn-secondary" id="zoom-out-btn">🔍-</button>
+                    <button class="btn btn-secondary" id="zoom-reset-btn">⌂</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Panel - Data & Analysis -->
+        <div class="data-panel">
+            <h3 style="color: #1f2937; margin-bottom: 15px; font-size: 16px;">📊 Real-Time Data</h3>
+            
+            <!-- Live Values -->
+            <div class="section">
+                <h3 id="current-state-title">Current State</h3>
+                
+                <div id="trajectory-a-data">
+                    <div class="trajectory-data-header" style="display: none;">
+                        <span style="color: #3b82f6; font-weight: 600; font-size: 12px;">🔵 Trajectory A</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Time</span>
+                        <span class="data-value"><span id="current-time">0.00</span> s</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Position X</span>
+                        <span class="data-value"><span id="position-x">0.0</span> m</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Position Y</span>
+                        <span class="data-value"><span id="position-y">0.0</span> m</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Velocity X</span>
+                        <span class="data-value"><span id="velocity-x">0.0</span> m/s</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Velocity Y</span>
+                        <span class="data-value"><span id="velocity-y">0.0</span> m/s</span>
+                    </div>
+                </div>
+                
+                <div id="trajectory-b-data" style="display: none;">
+                    <div class="trajectory-data-header">
+                        <span style="color: #ef4444; font-weight: 600; font-size: 12px;">🔴 Trajectory B</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Time</span>
+                        <span class="data-value"><span id="current-time-b">0.00</span> s</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Position X</span>
+                        <span class="data-value"><span id="position-x-b">0.0</span> m</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Position Y</span>
+                        <span class="data-value"><span id="position-y-b">0.0</span> m</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Velocity X</span>
+                        <span class="data-value"><span id="velocity-x-b">0.0</span> m/s</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Velocity Y</span>
+                        <span class="data-value"><span id="velocity-y-b">0.0</span> m/s</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Trajectory Predictions -->
+            <div class="section">
+                <h3 id="predictions-title">Trajectory Predictions</h3>
+                
+                <div id="trajectory-a-predictions">
+                    <div class="trajectory-data-header" style="display: none;">
+                        <span style="color: #3b82f6; font-weight: 600; font-size: 12px;">🔵 Trajectory A</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Max Range</span>
+                        <span class="data-value"><span id="max-range">0.0</span> m</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Max Height</span>
+                        <span class="data-value"><span id="max-height">0.0</span> m</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Flight Time</span>
+                        <span class="data-value"><span id="flight-time">0.0</span> s</span>
+                    </div>
+                </div>
+                
+                <div id="trajectory-b-predictions" style="display: none;">
+                    <div class="trajectory-data-header">
+                        <span style="color: #ef4444; font-weight: 600; font-size: 12px;">🔴 Trajectory B</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Max Range</span>
+                        <span class="data-value"><span id="max-range-b">0.0</span> m</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Max Height</span>
+                        <span class="data-value"><span id="max-height-b">0.0</span> m</span>
+                    </div>
+                    
+                    <div class="data-row">
+                        <span class="data-label">Flight Time</span>
+                        <span class="data-value"><span id="flight-time-b">0.0</span> s</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Error Validation -->
+            <div class="section">
+                <h3>Error Validation</h3>
+                
+                <div class="data-row">
+                    <span class="data-label">Theoretical Range</span>
+                    <span class="data-value"><span id="theoretical-range">0.0</span> m</span>
+                </div>
+                
+                <div class="data-row">
+                    <span class="data-label">Simulated Range</span>
+                    <span class="data-value"><span id="simulated-range">0.0</span> m</span>
+                </div>
+                
+                <div class="data-row">
+                    <span class="data-label">Absolute Error</span>
+                    <span class="data-value"><span id="absolute-error">0.0</span> m</span>
+                </div>
+                
+                <div class="data-row">
+                    <span class="data-label">Percentage Error</span>
+                    <span class="data-value"><span id="percentage-error">0.0</span> %</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        console.log('🚀 Interactive Physics Visualizer Loading...');
+        
+        class PhysicsVisualizer {
+            constructor() {
+                // Physics parameters
+                this.velocity = 50;
+                this.angle = 45;
+                this.gravity = 9.81;
+                
+                // Trajectory B parameters (for comparison mode)
+                this.velocityB = 60;
+                this.angleB = 30;
+                
+                // Analysis modes
+                this.compareMode = false;
+                this.envelopeMode = false;
+                this.maxSpeed = 100;
+                
+                // Simulation state
+                this.time = 0;
+                this.timeB = 0;
+                this.isRunning = false;
+                this.isPaused = false;
+                this.animationId = null;
+                this.trajectoryPoints = [];
+                this.trajectoryPointsB = [];
+                this.collisionDetected = false;
+                this.collisionDetectedB = false;
+                
+                // Canvas and rendering
+                this.canvas = document.getElementById('physics-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.camera = {
+                    x: 0,
+                    y: 0,
+                    zoom: 2,
+                    followProjectile: false
+                };
+                
+                // Objects and interaction
+                this.objects = [];
+                this.selectedObject = null;
+                this.isDragging = false;
+                this.dragOffset = { x: 0, y: 0 };
+                this.isPlacingObject = false;
+                
+                // Camera panning
+                this.isPanning = false;
+                this.panStart = { x: 0, y: 0 };
+                this.lastPanPosition = { x: 0, y: 0 };
+                
+                // Precomputed envelope
+                this.envelopePoints = [];
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupCanvas();
+                this.bindEvents();
+                this.updatePredictions();
+                this.render();
+                console.log('✅ Physics Visualizer initialized');
+            }
+            
+            setupCanvas() {
+                const resizeCanvas = () => {
+                    const container = this.canvas.parentElement;
+                    this.canvas.width = container.clientWidth;
+                    this.canvas.height = container.clientHeight;
+                    this.render();
+                };
+                
+                resizeCanvas();
+                window.addEventListener('resize', resizeCanvas);
+            }
+            
+            worldToScreen(worldX, worldY) {
+                const screenX = (worldX - this.camera.x) * this.camera.zoom + this.canvas.width * 0.1;
+                const screenY = this.canvas.height - ((worldY - this.camera.y) * this.camera.zoom + this.canvas.height * 0.1);
+                return { x: screenX, y: screenY };
+            }
+            
+            screenToWorld(screenX, screenY) {
+                const worldX = (screenX - this.canvas.width * 0.1) / this.camera.zoom + this.camera.x;
+                const worldY = (this.canvas.height - screenY - this.canvas.height * 0.1) / this.camera.zoom + this.camera.y;
+                return { x: worldX, y: worldY };
+            }
+            
+            bindEvents() {
+                // Input controls
+                this.bindInputControls();
+                
+                // Analysis mode controls
+                this.bindAnalysisModeControls();
+                
+                // Canvas interactions
+                this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                this.canvas.addEventListener('wheel', (e) => this.handleWheel(e));
+                
+                // Control buttons
+                document.getElementById('launch-btn').addEventListener('click', () => this.launch());
+                document.getElementById('pause-btn').addEventListener('click', () => this.pause());
+                document.getElementById('reset-btn').addEventListener('click', () => this.reset());
+                
+                // Zoom controls
+                document.getElementById('zoom-in-btn').addEventListener('click', () => this.zoom(1.2));
+                document.getElementById('zoom-out-btn').addEventListener('click', () => this.zoom(0.8));
+                document.getElementById('zoom-reset-btn').addEventListener('click', () => this.resetZoom());
+                
+                // Object controls
+                document.getElementById('add-object-btn').addEventListener('click', () => this.startObjectPlacement());
+                document.getElementById('clear-objects-btn').addEventListener('click', () => this.clearObjects());
+                
+                // Reverse calculator
+                document.getElementById('calc-btn').addEventListener('click', () => this.calculateMissingValues());
+                document.getElementById('apply-btn').addEventListener('click', () => this.applyCalculatedValues());
+            }
+            
+            bindInputControls() {
+                // Velocity controls
+                const velocitySlider = document.getElementById('velocity-slider');
+                const velocityInput = document.getElementById('velocity-input');
+                const velocityDisplay = document.getElementById('velocity-display');
+                
+                const updateVelocity = (value) => {
+                    this.velocity = parseFloat(value);
+                    velocitySlider.value = value;
+                    velocityInput.value = value;
+                    velocityDisplay.textContent = value;
+                    this.updatePredictions();
+                };
+                
+                velocitySlider.addEventListener('input', (e) => updateVelocity(e.target.value));
+                velocityInput.addEventListener('input', (e) => updateVelocity(e.target.value));
+                
+                // Angle controls
+                const angleSlider = document.getElementById('angle-slider');
+                const angleInput = document.getElementById('angle-input');
+                const angleDisplay = document.getElementById('angle-display');
+                
+                const updateAngle = (value) => {
+                    this.angle = parseFloat(value);
+                    angleSlider.value = value;
+                    angleInput.value = value;
+                    angleDisplay.textContent = value;
+                    this.updatePredictions();
+                };
+                
+                angleSlider.addEventListener('input', (e) => updateAngle(e.target.value));
+                angleInput.addEventListener('input', (e) => updateAngle(e.target.value));
+                
+                // Gravity controls
+                const gravitySlider = document.getElementById('gravity-slider');
+                const gravityInput = document.getElementById('gravity-input');
+                const gravityDisplay = document.getElementById('gravity-display');
+                
+                const updateGravity = (value) => {
+                    this.gravity = parseFloat(value);
+                    gravitySlider.value = value;
+                    gravityInput.value = value;
+                    gravityDisplay.textContent = value;
+                    this.updatePredictions();
+                };
+                
+                gravitySlider.addEventListener('input', (e) => updateGravity(e.target.value));
+                gravityInput.addEventListener('input', (e) => updateGravity(e.target.value));
+                
+                // Trajectory B controls (for compare mode)
+                const velocityBSlider = document.getElementById('velocity-b-slider');
+                const velocityBInput = document.getElementById('velocity-b-input');
+                const velocityBDisplay = document.getElementById('velocity-b-display');
+                
+                const updateVelocityB = (value) => {
+                    this.velocityB = parseFloat(value);
+                    velocityBSlider.value = value;
+                    velocityBInput.value = value;
+                    velocityBDisplay.textContent = value;
+                    this.updatePredictions();
+                };
+                
+                velocityBSlider.addEventListener('input', (e) => updateVelocityB(e.target.value));
+                velocityBInput.addEventListener('input', (e) => updateVelocityB(e.target.value));
+                
+                const angleBSlider = document.getElementById('angle-b-slider');
+                const angleBInput = document.getElementById('angle-b-input');
+                const angleBDisplay = document.getElementById('angle-b-display');
+                
+                const updateAngleB = (value) => {
+                    this.angleB = parseFloat(value);
+                    angleBSlider.value = value;
+                    angleBInput.value = value;
+                    angleBDisplay.textContent = value;
+                    this.updatePredictions();
+                };
+                
+                angleBSlider.addEventListener('input', (e) => updateAngleB(e.target.value));
+                angleBInput.addEventListener('input', (e) => updateAngleB(e.target.value));
+            }
+            
+            bindAnalysisModeControls() {
+                // Compare mode toggle
+                const compareModeToggle = document.getElementById('compare-mode-toggle');
+                compareModeToggle.addEventListener('change', (e) => {
+                    this.compareMode = e.target.checked;
+                    this.toggleCompareMode();
+                });
+                
+                // Envelope mode toggle
+                const envelopeToggle = document.getElementById('envelope-toggle');
+                envelopeToggle.addEventListener('change', (e) => {
+                    this.envelopeMode = e.target.checked;
+                    this.toggleEnvelopeMode();
+                });
+                
+                // Max speed slider for envelope
+                const maxSpeedSlider = document.getElementById('max-speed-slider');
+                const maxSpeedDisplay = document.getElementById('max-speed-display');
+                
+                maxSpeedSlider.addEventListener('input', (e) => {
+                    this.maxSpeed = parseFloat(e.target.value);
+                    maxSpeedDisplay.textContent = this.maxSpeed;
+                    if (this.envelopeMode) {
+                        this.computeReachabilityEnvelope();
+                        this.render();
+                    }
+                });
+                
+                // Scenario selector
+                const scenarioSelect = document.getElementById('scenario-select');
+                scenarioSelect.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        this.loadScenario(e.target.value);
+                        e.target.value = ''; // Reset selection
+                    }
+                });
+            }
+            
+            handleMouseDown(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const worldPos = this.screenToWorld(mouseX, mouseY);
+                
+                if (this.isPlacingObject) {
+                    // Place new object
+                    this.addObject(worldPos.x, worldPos.y);
+                    this.isPlacingObject = false;
+                    document.getElementById('add-object-btn').textContent = '➕ Add Rectangle Target';
+                    this.canvas.style.cursor = 'crosshair';
+                } else {
+                    // Check if clicking on existing object
+                    const clickedObject = this.getObjectAt(worldPos.x, worldPos.y);
+                    if (clickedObject) {
+                        this.selectedObject = clickedObject;
+                        this.isDragging = true;
+                        this.dragOffset = {
+                            x: worldPos.x - clickedObject.x,
+                            y: worldPos.y - clickedObject.y
+                        };
+                        this.canvas.style.cursor = 'grabbing';
+                    } else {
+                        // Start camera panning
+                        this.isPanning = true;
+                        this.panStart = { x: mouseX, y: mouseY };
+                        this.lastPanPosition = { x: this.camera.x, y: this.camera.y };
+                        this.canvas.style.cursor = 'grabbing';
+                    }
+                }
+                this.updateObjectsList();
+                this.render();
+            }
+            
+            handleMouseMove(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                const worldPos = this.screenToWorld(mouseX, mouseY);
+                
+                if (this.isDragging && this.selectedObject) {
+                    // Drag object
+                    this.selectedObject.x = worldPos.x - this.dragOffset.x;
+                    this.selectedObject.y = worldPos.y - this.dragOffset.y;
+                    this.render();
+                } else if (this.isPanning) {
+                    // Pan camera
+                    const deltaX = mouseX - this.panStart.x;
+                    const deltaY = mouseY - this.panStart.y;
+                    
+                    this.camera.x = this.lastPanPosition.x - deltaX / this.camera.zoom;
+                    this.camera.y = this.lastPanPosition.y + deltaY / this.camera.zoom;
+                    
+                    this.render();
+                } else if (this.isPlacingObject) {
+                    this.canvas.style.cursor = 'crosshair';
+                } else {
+                    const hoveredObject = this.getObjectAt(worldPos.x, worldPos.y);
+                    this.canvas.style.cursor = hoveredObject ? 'grab' : 'grab'; // Always show grab cursor for panning
+                }
+            }
+            
+            handleMouseUp(e) {
+                this.isDragging = false;
+                this.isPanning = false;
+                this.canvas.style.cursor = this.isPlacingObject ? 'crosshair' : 'grab';
+            }
+            
+            handleWheel(e) {
+                e.preventDefault();
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // Get world position before zoom
+                const worldPos = this.screenToWorld(mouseX, mouseY);
+                
+                // Apply zoom
+                const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+                this.camera.zoom *= zoomFactor;
+                this.camera.zoom = Math.max(0.1, Math.min(10, this.camera.zoom));
+                
+                // Adjust camera position to zoom towards mouse
+                const newWorldPos = this.screenToWorld(mouseX, mouseY);
+                this.camera.x += (newWorldPos.x - worldPos.x);
+                this.camera.y += (newWorldPos.y - worldPos.y);
+                
+                this.render();
+            }
+            
+            getObjectAt(worldX, worldY) {
+                return this.objects.find(obj => {
+                    return worldX >= obj.x - obj.width/2 && worldX <= obj.x + obj.width/2 &&
+                           worldY >= obj.y - obj.height/2 && worldY <= obj.y + obj.height/2;
+                });
+            }
+            
+            startObjectPlacement() {
+                this.isPlacingObject = true;
+                document.getElementById('add-object-btn').textContent = '📍 Click to Place';
+                this.canvas.style.cursor = 'crosshair';
+            }
+            
+            addObject(x, y) {
+                const newObject = {
+                    id: Date.now(),
+                    x: x,
+                    y: y,
+                    width: 20,
+                    height: 15,
+                    color: '#ef4444'
+                };
+                this.objects.push(newObject);
+                this.updateObjectsList();
+                console.log(`Added object at (${x.toFixed(1)}, ${y.toFixed(1)})`);
+            }
+            
+            clearObjects() {
+                this.objects = [];
+                this.selectedObject = null;
+                this.updateObjectsList();
+                this.render();
+                console.log('Cleared all objects');
+            }
+            
+            updateObjectsList() {
+                const objectsList = document.getElementById('objects-list');
+                objectsList.innerHTML = '';
+                
+                this.objects.forEach((obj, index) => {
+                    const objDiv = document.createElement('div');
+                    objDiv.className = 'object-item';
+                    if (obj === this.selectedObject) {
+                        objDiv.classList.add('selected');
+                    }
+                    
+                    objDiv.innerHTML = `
+                        <div style="font-weight: 600; margin-bottom: 4px;">Target ${index + 1}</div>
+                        <div style="font-size: 11px; color: #6b7280;">
+                            Position: (${obj.x.toFixed(1)}, ${obj.y.toFixed(1)})<br>
+                            Size: ${obj.width}×${obj.height}
+                        </div>
+                    `;
+                    
+                    objDiv.addEventListener('click', () => {
+                        this.selectedObject = obj;
+                        this.updateObjectsList();
+                        this.render();
+                    });
+                    
+                    objectsList.appendChild(objDiv);
+                });
+            }
+            
+            zoom(factor) {
+                const centerX = this.canvas.width / 2;
+                const centerY = this.canvas.height / 2;
+                
+                // Get world position at center before zoom
+                const worldPos = this.screenToWorld(centerX, centerY);
+                
+                // Apply zoom
+                this.camera.zoom *= factor;
+                this.camera.zoom = Math.max(0.1, Math.min(10, this.camera.zoom));
+                
+                // Adjust camera position to zoom towards center
+                const newWorldPos = this.screenToWorld(centerX, centerY);
+                this.camera.x += (newWorldPos.x - worldPos.x);
+                this.camera.y += (newWorldPos.y - worldPos.y);
+                
+                this.render();
+            }
+            
+            resetZoom() {
+                this.camera.zoom = 2;
+                this.camera.x = 0;
+                this.camera.y = 0;
+                this.render();
+            }
+            
+            updatePredictions() {
+                const angleRad = this.angle * Math.PI / 180;
+                const maxRange = (this.velocity * this.velocity * Math.sin(2 * angleRad)) / this.gravity;
+                const maxHeight = (this.velocity * this.velocity * Math.sin(angleRad) * Math.sin(angleRad)) / (2 * this.gravity);
+                const flightTime = (2 * this.velocity * Math.sin(angleRad)) / this.gravity;
+                
+                document.getElementById('max-range').textContent = maxRange.toFixed(1);
+                document.getElementById('max-height').textContent = maxHeight.toFixed(1);
+                document.getElementById('flight-time').textContent = flightTime.toFixed(1);
+                
+                // Update theoretical range for error calculation
+                document.getElementById('theoretical-range').textContent = maxRange.toFixed(2);
+                
+                // Update trajectory B predictions if in compare mode
+                if (this.compareMode) {
+                    const angleRadB = this.angleB * Math.PI / 180;
+                    const maxRangeB = (this.velocityB * this.velocityB * Math.sin(2 * angleRadB)) / this.gravity;
+                    const maxHeightB = (this.velocityB * this.velocityB * Math.sin(angleRadB) * Math.sin(angleRadB)) / (2 * this.gravity);
+                    const flightTimeB = (2 * this.velocityB * Math.sin(angleRadB)) / this.gravity;
+                    
+                    document.getElementById('max-range-b').textContent = maxRangeB.toFixed(1);
+                    document.getElementById('max-height-b').textContent = maxHeightB.toFixed(1);
+                    document.getElementById('flight-time-b').textContent = flightTimeB.toFixed(1);
+                }
+                
+                // Update envelope if enabled
+                if (this.envelopeMode) {
+                    this.computeReachabilityEnvelope();
+                }
+                
+                this.render();
+            }
+            
+            toggleCompareMode() {
+                const trajectoryBControls = document.getElementById('trajectory-b-controls');
+                const trajectoryBData = document.getElementById('trajectory-b-data');
+                const trajectoryBPredictions = document.getElementById('trajectory-b-predictions');
+                const paramsTitle = document.getElementById('params-title');
+                const currentStateTitle = document.getElementById('current-state-title');
+                const predictionsTitle = document.getElementById('predictions-title');
+                
+                // Show/hide trajectory headers
+                const trajectoryAHeaders = document.querySelectorAll('#trajectory-a-controls .trajectory-header, .trajectory-data-header');
+                
+                if (this.compareMode) {
+                    trajectoryBControls.style.display = 'block';
+                    trajectoryBData.style.display = 'block';
+                    trajectoryBPredictions.style.display = 'block';
+                    paramsTitle.textContent = 'Launch Parameters (Compare Mode)';
+                    currentStateTitle.textContent = 'Current State (Compare Mode)';
+                    predictionsTitle.textContent = 'Trajectory Predictions (Compare Mode)';
+                    
+                    // Show trajectory A headers
+                    trajectoryAHeaders.forEach(header => header.style.display = 'block');
+                } else {
+                    trajectoryBControls.style.display = 'none';
+                    trajectoryBData.style.display = 'none';
+                    trajectoryBPredictions.style.display = 'none';
+                    paramsTitle.textContent = 'Launch Parameters';
+                    currentStateTitle.textContent = 'Current State';
+                    predictionsTitle.textContent = 'Trajectory Predictions';
+                    
+                    // Hide trajectory A headers
+                    trajectoryAHeaders.forEach(header => header.style.display = 'none');
+                }
+                
+                this.updatePredictions();
+            }
+            
+            toggleEnvelopeMode() {
+                const envelopeControls = document.getElementById('envelope-controls');
+                
+                if (this.envelopeMode) {
+                    envelopeControls.style.display = 'block';
+                    this.computeReachabilityEnvelope();
+                } else {
+                    envelopeControls.style.display = 'none';
+                    this.envelopePoints = [];
+                }
+                
+                this.render();
+            }
+            
+            computeReachabilityEnvelope() {
+                this.envelopePoints = [];
+                const g = this.gravity;
+                const vMax = this.maxSpeed;
+                const vMaxSquared = vMax * vMax;
+                
+                // Calculate envelope points using the projectile range equation
+                // For a given range x, the minimum speed needed is: v = sqrt(g * x / sin(2θ_optimal))
+                // Where θ_optimal gives maximum range for that speed
+                
+                const maxRange = vMaxSquared / g; // Maximum possible range at 45 degrees
+                const numPoints = 100;
+                
+                for (let i = 0; i <= numPoints; i++) {
+                    const x = (i / numPoints) * maxRange;
+                    
+                    // For each x, find the maximum height achievable
+                    // Using the envelope equation: y = (v²/g) - (g*x²)/(4*v²)
+                    const y = (vMaxSquared / (4 * g)) - (g * x * x) / (4 * vMaxSquared);
+                    
+                    if (y >= 0) {
+                        this.envelopePoints.push({ x: x, y: y });
+                    }
+                }
+                
+                // Add the symmetric part (negative x values)
+                const positivePoints = [...this.envelopePoints].reverse();
+                for (let i = 1; i < positivePoints.length; i++) {
+                    const point = positivePoints[i];
+                    this.envelopePoints.unshift({ x: -point.x, y: point.y });
+                }
+            }
+            
+            loadScenario(scenarioId) {
+                // Clear existing objects first
+                this.clearObjects();
+                
+                switch (scenarioId) {
+                    case 'basic-target':
+                        this.velocity = 45;
+                        this.angle = 35;
+                        this.gravity = 9.81;
+                        this.addObject(80, 0); // Target at ground level
+                        break;
+                        
+                    case 'elevated-platform':
+                        this.velocity = 55;
+                        this.angle = 25;
+                        this.gravity = 9.81;
+                        this.addObject(90, 20); // Elevated target
+                        this.addObject(85, 0);  // Platform base
+                        break;
+                        
+                    case 'obstacle-path':
+                        this.velocity = 65;
+                        this.angle = 50;
+                        this.gravity = 9.81;
+                        this.addObject(40, 25); // Obstacle
+                        this.addObject(100, 0); // Target behind obstacle
+                        break;
+                        
+                    case 'long-range':
+                        this.velocity = 90;
+                        this.angle = 35;
+                        this.gravity = 9.81;
+                        this.addObject(200, 0); // Distant target
+                        break;
+                }
+                
+                // Update UI controls
+                this.updateControlsFromValues();
+                this.updatePredictions();
+                
+                console.log(`Loaded scenario: ${scenarioId}`);
+            }
+            
+            updateControlsFromValues() {
+                // Update trajectory A controls
+                document.getElementById('velocity-slider').value = this.velocity;
+                document.getElementById('velocity-input').value = this.velocity;
+                document.getElementById('velocity-display').textContent = this.velocity;
+                
+                document.getElementById('angle-slider').value = this.angle;
+                document.getElementById('angle-input').value = this.angle;
+                document.getElementById('angle-display').textContent = this.angle;
+                
+                document.getElementById('gravity-slider').value = this.gravity;
+                document.getElementById('gravity-input').value = this.gravity;
+                document.getElementById('gravity-display').textContent = this.gravity;
+            }
+            
+            launch() {
+                console.log('🚀 Launching projectile...');
+                this.isRunning = true;
+                this.isPaused = false;
+                this.time = 0;
+                this.timeB = 0;
+                this.trajectoryPoints = [];
+                this.trajectoryPointsB = [];
+                this.collisionDetected = false;
+                this.collisionDetectedB = false;
+                
+                // Enable automatic camera following during animation
+                this.camera.followProjectile = true;
+                
+                document.getElementById('launch-btn').disabled = true;
+                document.getElementById('pause-btn').disabled = false;
+                
+                this.animate();
+            }
+            
+            pause() {
+                if (this.isPaused) {
+                    this.isPaused = false;
+                    document.getElementById('pause-btn').textContent = '⏸️ Pause';
+                    this.animate();
+                } else {
+                    this.isPaused = true;
+                    document.getElementById('pause-btn').textContent = '▶️ Resume';
+                    if (this.animationId) {
+                        cancelAnimationFrame(this.animationId);
+                    }
+                }
+            }
+            
+            reset() {
+                console.log('🔄 Resetting simulation...');
+                this.isRunning = false;
+                this.isPaused = false;
+                this.time = 0;
+                this.timeB = 0;
+                this.trajectoryPoints = [];
+                this.trajectoryPointsB = [];
+                this.collisionDetected = false;
+                this.collisionDetectedB = false;
+                
+                // Disable automatic camera following
+                this.camera.followProjectile = false;
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                
+                document.getElementById('launch-btn').disabled = false;
+                document.getElementById('pause-btn').disabled = true;
+                document.getElementById('pause-btn').textContent = '⏸️ Pause';
+                
+                this.updateDataDisplay(0, 0, 0, 0, 0);
+                if (this.compareMode) {
+                    this.updateDataDisplayB(0, 0, 0, 0, 0);
+                }
+                this.render();
+            }
+            
+            animate() {
+                if (!this.isRunning || this.isPaused) return;
+                
+                // Trajectory A calculations
+                const angleRad = this.angle * Math.PI / 180;
+                const vx = this.velocity * Math.cos(angleRad);
+                const vy0 = this.velocity * Math.sin(angleRad);
+                
+                const x = vx * this.time;
+                const y = vy0 * this.time - 0.5 * this.gravity * this.time * this.time;
+                const vy = vy0 - this.gravity * this.time;
+                
+                let trajectoryAActive = true;
+                let trajectoryBActive = this.compareMode;
+                
+                // Check trajectory A ground collision
+                if (y <= 0 && this.time > 0.1) {
+                    trajectoryAActive = false;
+                    if (!this.compareMode) {
+                        this.isRunning = false;
+                        document.getElementById('launch-btn').disabled = false;
+                        document.getElementById('pause-btn').disabled = true;
+                        this.calculateErrorValidation(x);
+                        console.log('🎯 Projectile A landed!');
+                    }
+                }
+                
+                // Check trajectory A object collisions
+                if (trajectoryAActive && !this.collisionDetected) {
+                    this.checkCollisions(x, y);
+                    if (this.collisionDetected) {
+                        trajectoryAActive = false;
+                    }
+                }
+                
+                // Trajectory B calculations (if in compare mode)
+                let xB = 0, yB = 0, vyB = 0;
+                if (this.compareMode) {
+                    const angleRadB = this.angleB * Math.PI / 180;
+                    const vxB = this.velocityB * Math.cos(angleRadB);
+                    const vy0B = this.velocityB * Math.sin(angleRadB);
+                    
+                    xB = vxB * this.timeB;
+                    yB = vy0B * this.timeB - 0.5 * this.gravity * this.timeB * this.timeB;
+                    vyB = vy0B - this.gravity * this.timeB;
+                    
+                    // Check trajectory B ground collision
+                    if (yB <= 0 && this.timeB > 0.1) {
+                        trajectoryBActive = false;
+                        console.log('🎯 Projectile B landed!');
+                    }
+                    
+                    // Check trajectory B object collisions
+                    if (trajectoryBActive && !this.collisionDetectedB) {
+                        this.checkCollisionsB(xB, yB);
+                        if (this.collisionDetectedB) {
+                            trajectoryBActive = false;
+                        }
+                    }
+                }
+                
+                // Stop simulation if both trajectories are done
+                if (!trajectoryAActive && (!this.compareMode || !trajectoryBActive)) {
+                    this.isRunning = false;
+                    document.getElementById('launch-btn').disabled = false;
+                    document.getElementById('pause-btn').disabled = true;
+                    if (!this.compareMode) {
+                        this.calculateErrorValidation(x);
+                    }
+                    return;
+                }
+                
+                // Update camera to follow active projectile
+                if (trajectoryAActive) {
+                    this.updateCameraToFollowProjectile(x, y);
+                } else if (trajectoryBActive) {
+                    this.updateCameraToFollowProjectile(xB, yB);
+                }
+                
+                // Add points to trajectories
+                if (trajectoryAActive) {
+                    this.trajectoryPoints.push({ x: x, y: y });
+                }
+                if (trajectoryBActive) {
+                    this.trajectoryPointsB.push({ x: xB, y: yB });
+                }
+                
+                // Update displays
+                this.updateDataDisplay(this.time, x, y, vx, vy);
+                if (this.compareMode) {
+                    this.updateDataDisplayB(this.timeB, xB, yB, this.velocityB * Math.cos(this.angleB * Math.PI / 180), vyB);
+                }
+                
+                this.render();
+                
+                // Advance time
+                if (trajectoryAActive) {
+                    this.time += 0.02;
+                }
+                if (trajectoryBActive) {
+                    this.timeB += 0.02;
+                }
+                
+                // Continue animation
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+            
+            updateCameraToFollowProjectile(projectileX, projectileY) {
+                // Calculate target camera position to keep projectile in view
+                const canvasWidth = this.canvas.width;
+                const canvasHeight = this.canvas.height;
+                
+                // Target position: keep projectile at 30% from left, 70% from top
+                const targetScreenX = canvasWidth * 0.3;
+                const targetScreenY = canvasHeight * 0.7;
+                
+                // Calculate required camera position
+                const targetCameraX = projectileX - (targetScreenX - canvasWidth * 0.1) / this.camera.zoom;
+                const targetCameraY = projectileY - (canvasHeight - targetScreenY - canvasHeight * 0.1) / this.camera.zoom;
+                
+                // Smooth camera movement (ease towards target)
+                const easeSpeed = 0.05; // Slower for smoother movement
+                this.camera.x += (targetCameraX - this.camera.x) * easeSpeed;
+                this.camera.y += (targetCameraY - this.camera.y) * easeSpeed;
+                
+                // Don't let camera go too far left or below ground
+                this.camera.x = Math.max(-20, this.camera.x); // Allow slight negative for better view
+                this.camera.y = Math.max(-10, this.camera.y); // Allow slight negative for better view
+            }
+            
+            checkCollisions(projectileX, projectileY) {
+                for (const obj of this.objects) {
+                    if (projectileX >= obj.x - obj.width/2 && projectileX <= obj.x + obj.width/2 &&
+                        projectileY >= obj.y - obj.height/2 && projectileY <= obj.y + obj.height/2) {
+                        
+                        this.collisionDetected = true;
+                        console.log(`💥 Collision detected with object at (${obj.x.toFixed(1)}, ${obj.y.toFixed(1)})`);
+                        
+                        // Stop simulation
+                        this.isRunning = false;
+                        document.getElementById('launch-btn').disabled = false;
+                        document.getElementById('pause-btn').disabled = true;
+                        
+                        // Highlight collided object
+                        obj.color = '#ff6b35';
+                        break;
+                    }
+                }
+            }
+            
+            updateDataDisplay(time, x, y, vx, vy) {
+                document.getElementById('current-time').textContent = time.toFixed(2);
+                document.getElementById('position-x').textContent = x.toFixed(1);
+                document.getElementById('position-y').textContent = Math.max(0, y).toFixed(1);
+                document.getElementById('velocity-x').textContent = vx.toFixed(1);
+                document.getElementById('velocity-y').textContent = vy.toFixed(1);
+            }
+            
+            updateDataDisplayB(time, x, y, vx, vy) {
+                document.getElementById('current-time-b').textContent = time.toFixed(2);
+                document.getElementById('position-x-b').textContent = x.toFixed(1);
+                document.getElementById('position-y-b').textContent = Math.max(0, y).toFixed(1);
+                document.getElementById('velocity-x-b').textContent = vx.toFixed(1);
+                document.getElementById('velocity-y-b').textContent = vy.toFixed(1);
+            }
+            
+            checkCollisionsB(projectileX, projectileY) {
+                for (const obj of this.objects) {
+                    if (projectileX >= obj.x - obj.width/2 && projectileX <= obj.x + obj.width/2 &&
+                        projectileY >= obj.y - obj.height/2 && projectileY <= obj.y + obj.height/2) {
+                        
+                        this.collisionDetectedB = true;
+                        console.log(`💥 Collision detected with object at (${obj.x.toFixed(1)}, ${obj.y.toFixed(1)}) - Trajectory B`);
+                        
+                        // Highlight collided object differently for trajectory B
+                        obj.color = '#ff9500'; // Orange for trajectory B collision
+                        break;
+                    }
+                }
+            }
+            
+            calculateErrorValidation(simulatedRange) {
+                const angleRad = this.angle * Math.PI / 180;
+                const theoreticalRange = (this.velocity * this.velocity * Math.sin(2 * angleRad)) / this.gravity;
+                const absoluteError = Math.abs(theoreticalRange - simulatedRange);
+                const percentageError = (absoluteError / theoreticalRange) * 100;
+                
+                // Update error validation display
+                document.getElementById('simulated-range').textContent = simulatedRange.toFixed(2);
+                document.getElementById('absolute-error').textContent = absoluteError.toFixed(3);
+                document.getElementById('percentage-error').textContent = percentageError.toFixed(2);
+                
+                // Color code the percentage error
+                const errorElement = document.getElementById('percentage-error').parentElement.querySelector('.data-value');
+                if (percentageError < 1) {
+                    errorElement.style.color = '#10b981'; // Green for excellent
+                } else if (percentageError < 3) {
+                    errorElement.style.color = '#f59e0b'; // Orange for acceptable
+                } else {
+                    errorElement.style.color = '#ef4444'; // Red for poor
+                }
+                
+                // Highlight the error validation section
+                const errorSection = document.querySelector('.data-panel .section:last-child');
+                errorSection.style.background = 'rgba(59, 130, 246, 0.1)';
+                errorSection.style.borderLeft = '4px solid #3b82f6';
+                
+                console.log(`📊 Error Analysis: Theoretical=${theoreticalRange.toFixed(2)}m, Simulated=${simulatedRange.toFixed(2)}m, Error=${percentageError.toFixed(2)}%`);
+            }
+            
+            // Reverse Calculator
+            calculateMissingValues() {
+                // Get input values
+                const inputs = {
+                    velocity: parseFloat(document.getElementById('calc-velocity').value) || null,
+                    angle: parseFloat(document.getElementById('calc-angle').value) || null,
+                    range: parseFloat(document.getElementById('calc-range').value) || null,
+                    height: parseFloat(document.getElementById('calc-height').value) || null,
+                    time: parseFloat(document.getElementById('calc-time').value) || null
+                };
+                
+                // Count how many values are provided
+                const providedCount = Object.values(inputs).filter(v => v !== null).length;
+                
+                if (providedCount < 1) {
+                    alert('Please enter at least 1 value to calculate the rest');
+                    return;
+                }
+                
+                if (providedCount > 2) {
+                    alert('Please enter only 1-2 values. Too many inputs may lead to inconsistent results.');
+                    return;
+                }
+                
+                console.log(`🎯 Calculating with ${providedCount} input(s):`, inputs);
+                
+                try {
+                    const results = this.solveProjectileMotion(inputs);
+                    this.displayCalculatedResults(results);
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            }
+            
+            solveProjectileMotion(inputs) {
+                const g = this.gravity;
+                let results = { ...inputs };
+                
+                // Case 1: Velocity and Angle provided
+                if (inputs.velocity && inputs.angle) {
+                    const v = inputs.velocity;
+                    const θ = inputs.angle * Math.PI / 180;
+                    
+                    results.range = (v * v * Math.sin(2 * θ)) / g;
+                    results.height = (v * v * Math.sin(θ) * Math.sin(θ)) / (2 * g);
+                    results.time = (2 * v * Math.sin(θ)) / g;
+                }
+                // Case 2: Range and Angle provided
+                else if (inputs.range && inputs.angle) {
+                    const R = inputs.range;
+                    const θ = inputs.angle * Math.PI / 180;
+                    
+                    results.velocity = Math.sqrt((R * g) / Math.sin(2 * θ));
+                    results.height = (results.velocity * results.velocity * Math.sin(θ) * Math.sin(θ)) / (2 * g);
+                    results.time = (2 * results.velocity * Math.sin(θ)) / g;
+                }
+                // Case 3: Range and Velocity provided (choose optimal angle)
+                else if (inputs.range && inputs.velocity) {
+                    const R = inputs.range;
+                    const v = inputs.velocity;
+                    
+                    const sin2θ = (R * g) / (v * v);
+                    if (sin2θ > 1) throw new Error('Impossible trajectory - velocity too low for this range');
+                    
+                    const θ1 = Math.asin(sin2θ) / 2; // Low trajectory
+                    const θ2 = (Math.PI - Math.asin(sin2θ)) / 2; // High trajectory
+                    
+                    // Choose the angle closest to 45° for optimal trajectory
+                    const angle1Deg = θ1 * 180 / Math.PI;
+                    const angle2Deg = θ2 * 180 / Math.PI;
+                    
+                    results.angle = Math.abs(angle1Deg - 45) < Math.abs(angle2Deg - 45) ? angle1Deg : angle2Deg;
+                    const θ = results.angle * Math.PI / 180;
+                    
+                    results.height = (v * v * Math.sin(θ) * Math.sin(θ)) / (2 * g);
+                    results.time = (2 * v * Math.sin(θ)) / g;
+                }
+                // Single value cases - use current simulator values
+                else {
+                    if (inputs.velocity) {
+                        results.angle = this.angle;
+                        const v = inputs.velocity;
+                        const θ = results.angle * Math.PI / 180;
+                        
+                        results.range = (v * v * Math.sin(2 * θ)) / g;
+                        results.height = (v * v * Math.sin(θ) * Math.sin(θ)) / (2 * g);
+                        results.time = (2 * v * Math.sin(θ)) / g;
+                    }
+                    else if (inputs.angle) {
+                        results.velocity = this.velocity;
+                        const v = results.velocity;
+                        const θ = inputs.angle * Math.PI / 180;
+                        
+                        results.range = (v * v * Math.sin(2 * θ)) / g;
+                        results.height = (v * v * Math.sin(θ) * Math.sin(θ)) / (2 * g);
+                        results.time = (2 * v * Math.sin(θ)) / g;
+                    }
+                    else if (inputs.range) {
+                        const R = inputs.range;
+                        const θ = this.angle * Math.PI / 180;
+                        
+                        results.velocity = Math.sqrt((R * g) / Math.sin(2 * θ));
+                        results.angle = this.angle;
+                        results.height = (results.velocity * results.velocity * Math.sin(θ) * Math.sin(θ)) / (2 * g);
+                        results.time = (2 * results.velocity * Math.sin(θ)) / g;
+                    }
+                    else if (inputs.height) {
+                        const h = inputs.height;
+                        const θ = this.angle * Math.PI / 180;
+                        
+                        results.velocity = Math.sqrt((2 * g * h) / (Math.sin(θ) * Math.sin(θ)));
+                        results.angle = this.angle;
+                        results.range = (results.velocity * results.velocity * Math.sin(2 * θ)) / g;
+                        results.time = (2 * results.velocity * Math.sin(θ)) / g;
+                    }
+                    else if (inputs.time) {
+                        const t = inputs.time;
+                        const θ = this.angle * Math.PI / 180;
+                        
+                        results.velocity = (t * g) / (2 * Math.sin(θ));
+                        results.angle = this.angle;
+                        results.range = (results.velocity * results.velocity * Math.sin(2 * θ)) / g;
+                        results.height = (results.velocity * results.velocity * Math.sin(θ) * Math.sin(θ)) / (2 * g);
+                    }
+                }
+                
+                // Validate results
+                if (results.velocity < 0 || results.angle < 5 || results.angle > 85) {
+                    throw new Error('Invalid trajectory parameters calculated');
+                }
+                
+                return results;
+            }
+            
+            displayCalculatedResults(results) {
+                let html = '';
+                
+                // Focus on time as primary output
+                html += '<div style="font-weight: bold; color: #2563eb; margin-bottom: 8px;">📊 Calculated Values:</div>';
+                html += `<div style="background: #dcfce7; padding: 8px; border-radius: 4px; border-left: 3px solid #16a34a; margin: 4px 0;"><strong>⏱️ Flight Time:</strong> ${results.time.toFixed(2)} s</div>`;
+                html += `<div style="margin: 4px 0;"><strong>🚀 Velocity:</strong> ${results.velocity.toFixed(1)} m/s</div>`;
+                html += `<div style="margin: 4px 0;"><strong>📐 Angle:</strong> ${results.angle.toFixed(1)}°</div>`;
+                html += `<div style="margin: 4px 0;"><strong>📏 Range:</strong> ${results.range.toFixed(1)} m</div>`;
+                html += `<div style="margin: 4px 0;"><strong>📈 Max Height:</strong> ${results.height.toFixed(1)} m</div>`;
+                
+                document.getElementById('calc-output').innerHTML = html;
+                document.getElementById('calc-results').style.display = 'block';
+                
+                // Store results for applying
+                this.calculatedResults = results;
+                
+                console.log('📊 Calculated results (Time focus):', results);
+            }
+            
+            applyCalculatedValues() {
+                if (!this.calculatedResults) return;
+                
+                console.log(`🎯 Applying calculated values: ${this.calculatedResults.angle.toFixed(1)}° at ${this.calculatedResults.velocity.toFixed(1)} m/s`);
+                
+                this.velocity = Math.round(this.calculatedResults.velocity);
+                this.angle = Math.round(this.calculatedResults.angle);
+                
+                // Update sliders and displays
+                document.getElementById('velocity-slider').value = this.velocity;
+                document.getElementById('velocity-input').value = this.velocity;
+                document.getElementById('velocity-display').textContent = this.velocity;
+                document.getElementById('angle-slider').value = this.angle;
+                document.getElementById('angle-input').value = this.angle;
+                document.getElementById('angle-display').textContent = this.angle;
+                
+                // Recalculate and redraw
+                this.updatePredictions();
+                
+                // Clear calculator inputs
+                document.getElementById('calc-velocity').value = '';
+                document.getElementById('calc-angle').value = '';
+                document.getElementById('calc-range').value = '';
+                document.getElementById('calc-height').value = '';
+                document.getElementById('calc-time').value = '';
+                document.getElementById('calc-results').style.display = 'none';
+                
+                console.log(`Applied: ${this.angle}° at ${this.velocity} m/s`);
+            }
+            
+            render() {
+                // Clear canvas
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw grid
+                this.drawGrid();
+                
+                // Draw reachability envelope (behind everything else)
+                if (this.envelopeMode && this.envelopePoints.length > 0) {
+                    this.drawReachabilityEnvelope();
+                }
+                
+                // Draw objects
+                this.drawObjects();
+                
+                // Draw trajectories
+                this.drawTrajectory();
+                if (this.compareMode) {
+                    this.drawTrajectoryB();
+                }
+                
+                // Draw projectiles if running
+                if (this.isRunning && this.trajectoryPoints.length > 0) {
+                    const lastPoint = this.trajectoryPoints[this.trajectoryPoints.length - 1];
+                    this.drawProjectile(lastPoint.x, lastPoint.y, '#3b82f6'); // Blue for trajectory A
+                }
+                
+                if (this.isRunning && this.compareMode && this.trajectoryPointsB.length > 0) {
+                    const lastPointB = this.trajectoryPointsB[this.trajectoryPointsB.length - 1];
+                    this.drawProjectile(lastPointB.x, lastPointB.y, '#ef4444'); // Red for trajectory B
+                }
+                
+                // Draw launch point
+                this.drawLaunchPoint();
+                
+                // Draw predicted trajectories
+                if (!this.isRunning) {
+                    this.drawPredictedTrajectory();
+                    if (this.compareMode) {
+                        this.drawPredictedTrajectoryB();
+                    }
+                }
+            }
+            
+            drawGrid() {
+                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                this.ctx.lineWidth = 1;
+                
+                const gridSpacing = 10;
+                const startX = Math.floor(this.camera.x / gridSpacing) * gridSpacing;
+                const endX = startX + this.canvas.width / this.camera.zoom + gridSpacing;
+                const startY = Math.floor(this.camera.y / gridSpacing) * gridSpacing;
+                const endY = startY + this.canvas.height / this.camera.zoom + gridSpacing;
+                
+                // Set up text style for coordinate labels
+                this.ctx.font = '10px Arial';
+                this.ctx.fillStyle = '#666';
+                
+                // Vertical lines with X coordinate labels
+                for (let x = startX; x <= endX; x += gridSpacing) {
+                    const screenPos = this.worldToScreen(x, 0);
+                    
+                    // Draw vertical grid line
+                    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(screenPos.x, 0);
+                    this.ctx.lineTo(screenPos.x, this.canvas.height);
+                    this.ctx.stroke();
+                    
+                    // Add X coordinate labels (only for positive values and multiples of 20)
+                    if (x > 0 && x % 20 === 0 && screenPos.x >= 30 && screenPos.x <= this.canvas.width - 30) {
+                        this.ctx.textAlign = 'center';
+                        this.ctx.fillText(x + 'm', screenPos.x, this.canvas.height - 5);
+                    }
+                }
+                
+                // Horizontal lines with Y coordinate labels
+                for (let y = startY; y <= endY; y += gridSpacing) {
+                    const screenPos = this.worldToScreen(0, y);
+                    
+                    // Draw horizontal grid line
+                    this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(0, screenPos.y);
+                    this.ctx.lineTo(this.canvas.width, screenPos.y);
+                    this.ctx.stroke();
+                    
+                    // Add Y coordinate labels (only for positive values and multiples of 10)
+                    if (y > 0 && y % 10 === 0 && screenPos.y >= 20 && screenPos.y <= this.canvas.height - 20) {
+                        this.ctx.textAlign = 'right';
+                        this.ctx.fillText(y + 'm', 25, screenPos.y + 3);
+                    }
+                }
+                
+                // Draw ground line
+                const groundScreen = this.worldToScreen(0, 0);
+                this.ctx.strokeStyle = '#8B4513';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, groundScreen.y);
+                this.ctx.lineTo(this.canvas.width, groundScreen.y);
+                this.ctx.stroke();
+            }
+            
+            drawObjects() {
+                this.objects.forEach(obj => {
+                    const screenPos = this.worldToScreen(obj.x, obj.y);
+                    const screenWidth = obj.width * this.camera.zoom;
+                    const screenHeight = obj.height * this.camera.zoom;
+                    
+                    // Draw object
+                    this.ctx.fillStyle = obj.color;
+                    this.ctx.strokeStyle = obj === this.selectedObject ? '#1f2937' : '#374151';
+                    this.ctx.lineWidth = obj === this.selectedObject ? 3 : 1;
+                    
+                    this.ctx.fillRect(
+                        screenPos.x - screenWidth/2,
+                        screenPos.y - screenHeight/2,
+                        screenWidth,
+                        screenHeight
+                    );
+                    
+                    this.ctx.strokeRect(
+                        screenPos.x - screenWidth/2,
+                        screenPos.y - screenHeight/2,
+                        screenWidth,
+                        screenHeight
+                    );
+                });
+            }
+            
+            drawTrajectory() {
+                if (this.trajectoryPoints.length < 2) return;
+                
+                this.ctx.strokeStyle = '#3b82f6';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                
+                let firstPoint = true;
+                for (const point of this.trajectoryPoints) {
+                    const screenPos = this.worldToScreen(point.x, point.y);
+                    
+                    if (firstPoint) {
+                        this.ctx.moveTo(screenPos.x, screenPos.y);
+                        firstPoint = false;
+                    } else {
+                        this.ctx.lineTo(screenPos.x, screenPos.y);
+                    }
+                }
+                this.ctx.stroke();
+            }
+            
+            drawProjectile(x, y, color = '#ef4444') {
+                const screenPos = this.worldToScreen(x, y);
+                
+                // Draw projectile with specified color
+                this.ctx.fillStyle = color;
+                this.ctx.strokeStyle = color === '#3b82f6' ? '#2563eb' : '#dc2626';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(screenPos.x, screenPos.y, 8, 0, 2 * Math.PI);
+                this.ctx.fill();
+                this.ctx.stroke();
+                
+                // Draw highlight
+                this.ctx.fillStyle = '#fbbf24';
+                this.ctx.beginPath();
+                this.ctx.arc(screenPos.x - 2, screenPos.y - 2, 3, 0, 2 * Math.PI);
+                this.ctx.fill();
+                
+                // Draw position coordinates
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                this.ctx.font = '12px Arial';
+                this.ctx.textAlign = 'left';
+                this.ctx.fillText(`(${x.toFixed(1)}, ${y.toFixed(1)})`, screenPos.x + 12, screenPos.y - 8);
+            }
+            
+            drawLaunchPoint() {
+                const screenPos = this.worldToScreen(0, 0);
+                
+                this.ctx.fillStyle = '#10b981';
+                this.ctx.strokeStyle = '#059669';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(screenPos.x, screenPos.y, 6, 0, 2 * Math.PI);
+                this.ctx.fill();
+                this.ctx.stroke();
+            }
+            
+            drawPredictedTrajectory() {
+                const angleRad = this.angle * Math.PI / 180;
+                const vx = this.velocity * Math.cos(angleRad);
+                const vy0 = this.velocity * Math.sin(angleRad);
+                const flightTime = (2 * this.velocity * Math.sin(angleRad)) / this.gravity;
+                
+                this.ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
+                this.ctx.beginPath();
+                
+                let firstPoint = true;
+                for (let t = 0; t <= flightTime; t += 0.1) {
+                    const x = vx * t;
+                    const y = vy0 * t - 0.5 * this.gravity * t * t;
+                    
+                    if (y < 0) break;
+                    
+                    const screenPos = this.worldToScreen(x, y);
+                    
+                    if (firstPoint) {
+                        this.ctx.moveTo(screenPos.x, screenPos.y);
+                        firstPoint = false;
+                    } else {
+                        this.ctx.lineTo(screenPos.x, screenPos.y);
+                    }
+                }
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+            
+            drawPredictedTrajectoryB() {
+                const angleRad = this.angleB * Math.PI / 180;
+                const vx = this.velocityB * Math.cos(angleRad);
+                const vy0 = this.velocityB * Math.sin(angleRad);
+                const flightTime = (2 * this.velocityB * Math.sin(angleRad)) / this.gravity;
+                
+                this.ctx.strokeStyle = 'rgba(239, 68, 68, 0.3)';
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([3, 3]);
+                this.ctx.beginPath();
+                
+                let firstPoint = true;
+                for (let t = 0; t <= flightTime; t += 0.1) {
+                    const x = vx * t;
+                    const y = vy0 * t - 0.5 * this.gravity * t * t;
+                    
+                    if (y < 0) break;
+                    
+                    const screenPos = this.worldToScreen(x, y);
+                    
+                    if (firstPoint) {
+                        this.ctx.moveTo(screenPos.x, screenPos.y);
+                        firstPoint = false;
+                    } else {
+                        this.ctx.lineTo(screenPos.x, screenPos.y);
+                    }
+                }
+                this.ctx.stroke();
+                this.ctx.setLineDash([]);
+            }
+            
+            drawTrajectoryB() {
+                if (this.trajectoryPointsB.length < 2) return;
+                
+                this.ctx.strokeStyle = '#ef4444';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                
+                let firstPoint = true;
+                for (const point of this.trajectoryPointsB) {
+                    const screenPos = this.worldToScreen(point.x, point.y);
+                    
+                    if (firstPoint) {
+                        this.ctx.moveTo(screenPos.x, screenPos.y);
+                        firstPoint = false;
+                    } else {
+                        this.ctx.lineTo(screenPos.x, screenPos.y);
+                    }
+                }
+                this.ctx.stroke();
+            }
+            
+            drawReachabilityEnvelope() {
+                if (this.envelopePoints.length < 3) return;
+                
+                this.ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+                this.ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)';
+                this.ctx.lineWidth = 1;
+                
+                this.ctx.beginPath();
+                
+                // Start from the first point
+                const firstPoint = this.envelopePoints[0];
+                const firstScreen = this.worldToScreen(firstPoint.x, firstPoint.y);
+                this.ctx.moveTo(firstScreen.x, firstScreen.y);
+                
+                // Draw the envelope curve
+                for (let i = 1; i < this.envelopePoints.length; i++) {
+                    const point = this.envelopePoints[i];
+                    const screenPos = this.worldToScreen(point.x, point.y);
+                    this.ctx.lineTo(screenPos.x, screenPos.y);
+                }
+                
+                // Close the shape by connecting to ground
+                const lastPoint = this.envelopePoints[this.envelopePoints.length - 1];
+                const lastScreen = this.worldToScreen(lastPoint.x, 0);
+                this.ctx.lineTo(lastScreen.x, lastScreen.y);
+                
+                const firstGroundScreen = this.worldToScreen(firstPoint.x, 0);
+                this.ctx.lineTo(firstGroundScreen.x, firstGroundScreen.y);
+                
+                this.ctx.closePath();
+                this.ctx.fill();
+                this.ctx.stroke();
+            }
+        }
+        
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🌟 DOM ready, creating physics visualizer...');
+            try {
+                window.visualizer = new PhysicsVisualizer();
+                console.log('🎉 Physics Visualizer created successfully!');
+            } catch (error) {
+                console.error('❌ Error creating visualizer:', error);
+            }
+        });
+        
+        console.log('📋 Interactive Physics Visualizer script loaded successfully');
+    </script>
+</body>
+</html>
